@@ -11,10 +11,10 @@
 	# step 5: is_known_tracker(host, trackerlist) -> True/False
 	# step 6: counts #counts[host] goes up by 1
 #step7: print_counts(counts), sorted, plus total
-
+import sys
 import json
 from urllib.parse import urlparse
- 
+from playwright.sync_api import sync_playwright
  
 def get_host(url):
     parsed = urlparse(url)
@@ -57,17 +57,27 @@ def print_counts(counts,cats):
         print(f" {host:<32} {n:<4} {', '.join(sorted(cats[host]))}")
     
     print(f"Total: {sum(counts.values())} tracker requests")
+
+def get_requests(url):
+	urls = []
+	with sync_playwright() as p:
+		browser = p.chromium.launch()
+		page = browser.new_page()
+		page.on("request", lambda request: urls.append(request.url))
+		page.goto(url, wait_until="networkidle")
+		browser.close()
+	return urls
  
- 
+
 def main():
     trackers = load_trackers("services.txt")
-    har = json.load(open("har.txt"))
-    entries = har["log"]["entries"]
-    page_host = "www.cnn.com"
+    page_url = sys.argv[1]
+    page_host = get_host(page_url)
+    urls = get_requests(page_url)
     counts = {}
     cats = {}
-    for entry in entries:
-        url = entry["request"]["url"]
+
+    for url in urls:
         host = get_host(url)
         if host is None:
             continue
@@ -76,6 +86,8 @@ def main():
             cats[host] = trackers[get_domain(host)]
  
     print_counts(counts, cats)
+
+
     
  
  
