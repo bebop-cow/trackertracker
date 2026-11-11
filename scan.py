@@ -67,6 +67,15 @@ def get_requests(url):
 		page.goto(url, wait_until="networkidle")
 		browser.close()
 	return urls
+
+def check_blocked(counts, cats):
+    total = sum(counts.values())
+    blocked = 0
+    for host, n in counts.items():
+        if "Anti-fraud" in cats[host]:
+            blocked += n
+    if total > 0 and blocked >= total / 2:
+        print("⚠ Most hits are anti-bot services. The site may have blocked the scanner; results are incomplete.")
  
 
 def main():
@@ -82,14 +91,13 @@ def main():
         if host is None:
             continue
         if is_third_party(host, page_host) and is_known_tracker(host, trackers):
+            if trackers[get_domain(host)] == {"Content"}:
+                continue
             counts[host] = counts.get(host, 0) + 1
             cats[host] = trackers[get_domain(host)]
  
     print_counts(counts, cats)
-
-
-    
- 
+    check_blocked(counts, cats)
  
 if __name__ == "__main__":
     main()
